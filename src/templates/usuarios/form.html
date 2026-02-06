@@ -1,0 +1,140 @@
+{% extends './base.html' %}
+
+{% block title %}{{ accion }} Usuario{% endblock %}
+
+{% block customCSS %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/form.css') }}">
+{% endblock %}
+
+{% block body %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3>
+                        <i class="fas fa-user-edit"></i> {{ accion }} Usuario
+                        <span class="badge bg-danger ms-2">Admin</span>
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        
+                        <div class="mb-3">
+                            <label class="form-label">
+                                <i class="fas fa-user"></i> Usuario *
+                            </label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   name="username" 
+                                   value="{{ usuario.username if usuario else '' }}" 
+                                   required
+                                   placeholder="Nombre de usuario">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">
+                                <i class="fas fa-lock"></i> Contraseña 
+                                {% if usuario %}
+                                    <small class="text-muted">(dejar en blanco para no cambiar)</small>
+                                {% else %}
+                                    *
+                                {% endif %}
+                            </label>
+
+                            <div class="input-group">
+                                <input type="password"
+                                    class="form-control"
+                                    name="password"
+                                    id="password"
+                                    {% if not usuario %}required{% endif %}
+                                    placeholder="Mínimo 6 caracteres"
+                                    style="border-right: none;">
+
+                                <span class="input-group-text" 
+                                      id="togglePasswordBtn"
+                                      onclick="togglePassword()"
+                                      title="Mostrar/Ocultar contraseña">
+                                    <i class="fas fa-eye" id="eyeIcon"></i>
+                                </span>
+                            </div>
+
+                            <small class="form-text text-muted">Mínimo 6 caracteres</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">
+                                <i class="fas fa-id-card"></i> Nombre Completo
+                            </label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   name="fullname" 
+                                   value="{{ usuario.fullname if usuario else '' }}"
+                                   placeholder="Nombre completo del usuario">
+                        </div>
+                        
+                        <!-- Selector de rol -->
+                        <div class="mb-3">
+                            <label class="form-label">
+                                <i class="fas fa-user-shield"></i> Rol *
+                            </label>
+                            <select class="form-select" name="role" required>
+                                <option value="usuario" {% if usuario and usuario.role == 'usuario' %}selected{% endif %}>
+                                    Usuario Normal
+                                </option>
+                                <option value="administrador" {% if usuario and usuario.role == 'administrador' %}selected{% endif %}>
+                                    Administrador
+                                </option>
+                            </select>
+                            <small class="form-text text-muted">
+                                Solo los administradores pueden gestionar usuarios
+                            </small>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{{ url_for('usuarios') }}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Guardar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Información adicional -->
+            <div class="card mt-3">
+                <div class="card-body bg-light">
+                    <h6><i class="fas fa-info-circle"></i> Información sobre Roles:</h6>
+                    <ul class="mb-0">
+                        <li><strong>Usuario Normal:</strong> Solo puede usar el detector de plagas</li>
+                        <li><strong>Administrador:</strong> Puede gestionar usuarios y usar el detector</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function togglePassword() {
+    const passwordInput = document.getElementById("password");
+    const eyeIcon = document.getElementById("eyeIcon");
+
+    if (passwordInput.type === "password") {
+        // Mostrar contraseña
+        passwordInput.type = "text";
+        eyeIcon.classList.remove("fa-eye");
+        eyeIcon.classList.add("fa-eye-slash");
+    } else {
+        // Ocultar contraseña
+        passwordInput.type = "password";
+        eyeIcon.classList.remove("fa-eye-slash");
+        eyeIcon.classList.add("fa-eye");
+    }
+}
+</script>
+
+{% endblock %}

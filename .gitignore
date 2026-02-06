@@ -1,0 +1,27 @@
+# Entorno virtual
+venv/
+env/
+
+# Cache
+__pycache__/
+*.pyc
+
+# Archivos grandes
+*.h5
+*.keras
+*.pt
+*.pth
+*.zip
+*.rar
+
+# Archivos de configuración local
+.env
+
+# Base de datos local
+*.db
+
+# Carpeta de logs
+logs/
+
+# Carpeta uploads
+uploads/

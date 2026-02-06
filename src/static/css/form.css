@@ -1,0 +1,32 @@
+#togglePasswordBtn {
+        cursor: pointer;
+        user-select: none;
+        min-width: 45px;
+        background-color: #e9ecef;
+        border: 1px solid #ced4da;
+        border-left: none;
+    }
+    
+    #togglePasswordBtn:hover {
+        background-color: #dee2e6;
+        transition: background-color 0.2s ease;
+    }
+    
+    #togglePasswordBtn:active {
+        background-color: #d3d3d3;
+    }
+    
+    #eyeIcon {
+        transition: transform 0.2s ease;
+        color: #6c757d;
+        font-size: 1.1rem;
+    }
+    
+    #togglePasswordBtn:active #eyeIcon {
+        transform: scale(0.9);
+    }
+    
+    #password:focus {
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }

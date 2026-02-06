@@ -1,0 +1,328 @@
+{% extends './base.html' %}
+
+{% block title %}Home{% endblock %}
+
+{% block customCSS %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<script src="https://unpkg.com/feather-icons"></script>
+
+{% endblock %}
+
+{% block body %}
+
+<div class="container">
+    <div class="user-bar">
+        <div>
+            <h1>
+                Bienvenido, {{ current_user.fullname }}
+                <!-- Badge de rol -->
+                {% if current_user.is_admin() %}
+                <span class="role-badge admin">
+                    <i data-feather="shield"></i> Administrador
+                </span>
+                {% else %}
+                <span class="role-badge user">
+                    <i data-feather="user"></i> Usuario
+                </span>
+                {% endif %}
+            </h1>
+        </div>
+        
+        <div style="display: flex; gap: 10px;">
+            <!-- Botón de Usuarios: SOLO para administradores -->
+            {% if current_user.is_admin() %}
+            <a class="btn btn-warning" href="{{ url_for('usuarios') }}">
+                <i data-feather="users"></i> Usuarios
+            </a>
+            {% endif %}
+            
+            <a class="btn btn-secondary logout-btn" href="{{ url_for('logout') }}">
+                <i data-feather="log-out"></i> Cerrar sesión
+            </a>
+        </div>
+    </div>
+
+    <div class="header">
+        <h1>
+            <i data-feather="target"></i>
+            Detector de Plagas en Palta
+        </h1>
+        <p>Sistema de IA con imágenes</p>
+    </div>
+
+    <div class="content">
+
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+            {% for message in messages %}
+            <strong>{{ message }}</strong>
+            {% endfor %}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <form method="POST" enctype="multipart/form-data" id="uploadForm" action="{{ url_for('home') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="upload-section" id="dropZone">
+                <div class="icon" style="font-size: 3em; margin-bottom: 15px;">
+                    <i data-feather="upload"></i>
+                </div>
+
+                <p style="font-size: 1.2em; color: #495057; margin-bottom: 20px;">
+                    Arrastra hasta 10 imágenes aquí o haz clic para seleccionar
+                </p>
+
+                <div class="file-input-wrapper">
+                    <input type="file" name="files" id="fileInput" accept="image/jpeg,image/jpg,image/png" multiple required>
+                    <label for="fileInput" class="file-label">
+                        <i data-feather="folder"></i> Seleccionar Imágenes (1-10)
+                    </label>
+                </div>
+
+                <div class="file-name" id="fileName">Sin archivos seleccionados</div>
+                <div id="fileCount" class="file-count" style="display:none;">0 archivos</div>
+            </div>
+
+            <button type="submit" class="submit-btn" id="submitBtn">
+                <i data-feather="search"></i> Analizar Imágenes
+            </button>
+        </form>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Analizando imágenes con IA...</p>
+        </div>
+
+        {% if resultado %}
+        <div class="result">
+            
+            <!-- CAJA DE VOTACIÓN -->
+            <div class="voting-box">
+                <h2>
+                    <i data-feather="check-square"></i>
+                    Resultado por Votación Mayoritaria
+                </h2>
+                
+                <div class="interpretation-box" style="background: rgba(255,255,255,0.95); color: #212529;">
+                    {{ resultado.mensaje_interpretacion }}
+                </div>
+                
+                <div class="voting-stats">
+                    <div class="stat-row">
+                        <strong>Categoría ganadora:</strong>
+                        <span style="font-size: 1.2em;">{{ resultado.predicted_class }}</span>
+                    </div>
+                    <div class="stat-row">
+                        <strong>Votos obtenidos:</strong>
+                        <span>{{ resultado.votes }} de {{ resultado.total_images }} 
+                        ({{ resultado.consensus_percentage }}%)</span>
+                    </div>
+                    <div class="stat-row">
+                        <strong>Nivel de confianza:</strong>
+                        <span class="confidence-badge confidence-{{ resultado.nivel_confianza|lower|replace(' ', '-') }}">
+                            {{ resultado.nivel_confianza }}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- GRÁFICO DE VOTOS -->
+                {% if resultado.details_by_class|length > 1 %}
+                <div class="vote-chart">
+                    <h3 style="margin-bottom: 15px;">📊 Distribución de Votos</h3>
+                    {% for clase, detalles in resultado.details_by_class.items() %}
+                    <div class="vote-bar">
+                        <div class="vote-bar-fill" style="width: {{ detalles.percentage }}%">
+                            {{ clase }}: {{ detalles.count }} ({{ detalles.percentage|round(0) }}%)
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="result-header">
+                <i data-feather="bar-chart-2"></i> Detalles del Diagnóstico
+            </div>
+
+            <div class="result-content">
+                
+                {% set class_slug = predicted_class|lower|replace(' ', '-') %}
+
+                <div class="detection-card {{ class_slug }}">
+                    <div class="detection-title">
+                        {% if 'sana' in predicted_class|lower %}
+                            <i data-feather="check-circle"></i>
+                        {% elif 'plaga' in predicted_class|lower and 'huevos' not in predicted_class|lower %}
+                            <i data-feather="bug"></i>
+                        {% elif 'huevos' in predicted_class|lower %}
+                            <i data-feather="alert-octagon"></i>
+                        {% elif 'dañada' in predicted_class|lower or 'danada' in predicted_class|lower %}
+                            <i data-feather="alert-triangle"></i>
+                        {% elif 'relacionado' in predicted_class|lower %}
+                            <i data-feather="x-circle"></i>
+                        {% endif %}
+
+                        {{ predicted_class }}
+                    </div>
+
+                    <div class="confidence-bar">
+                        <div class="confidence-fill" style="width: {{ probability }}%">
+                            {{ probability }}% (por mayoría de votos)
+                        </div>
+                    </div>
+
+                    {% if resultado.consensus_percentage < 60 %}
+                    <div class="alert alert-warning">
+                        <i data-feather="alert-triangle"></i>
+                        <strong>Advertencia:</strong> No hay mayoría clara ({{ resultado.consensus_percentage }}%). 
+                        Se recomienda verificación manual o tomar más imágenes.
+                    </div>
+                    {% endif %}
+
+                    {% if 'plaga' in predicted_class|lower and resultado.consensus_percentage >= 70 %}
+                    <div class="alert alert-danger">
+                        <i data-feather="alert-octagon"></i>
+                        <strong>ALERTA:</strong> {{ resultado.votes }} de {{ resultado.total_images }} imágenes 
+                        confirman presencia de {{ predicted_class|lower }}.
+                    </div>
+                    {% endif %}
+
+                    <div class="info-section">
+                        <h3><i data-feather="info"></i> Descripción</h3>
+                        <p>{{ description }}</p>
+                    </div>
+
+                    <div class="info-section">
+                        <h3><i data-feather="tool"></i> Tratamiento Recomendado</h3>
+                        <p style="white-space: pre-line;">{{ instructions }}</p>
+                    </div>
+
+                    <div class="info-section">
+                        <h3><i data-feather="activity"></i> Nivel de Severidad</h3>
+                        <p><strong>{{ severity }}</strong></p>
+                    </div>
+
+                    {% if recommendations %}
+                    <div class="info-section">
+                        <h3><i data-feather="list"></i> Recomendaciones Adicionales</h3>
+                        <p style="white-space: pre-line;">{{ recommendations }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+
+                
+                <div class="info-section">
+                    <h3><i data-feather="cpu"></i> Información Técnica del Análisis</h3>
+                    <div class="detail-item">
+                        <strong>Método de análisis:</strong>
+                        <span>Votación Mayoritaria</span>
+                    </div>
+                    <div class="detail-item">
+                        <strong>Confianza final:</strong>
+                        <span>{{ resultado.probability }}% (basada en {{ resultado.nivel_confianza }})</span>
+                    </div>
+                    <div class="detail-item">
+                        <strong>Promedio probabilidades individuales:</strong>
+                        <span>{{ resultado.raw_probability }}%</span>
+                    </div>
+                    <div class="detail-item">
+                        <strong>Imágenes analizadas:</strong>
+                        <span>{{ resultado.total_images }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <strong>Arquitectura:</strong>
+                        <span>CNN MobileNetV2 con Transfer Learning</span>
+                    </div>
+                </div>
+
+               
+                <div class="info-section">
+                    <h3><i data-feather="image"></i> Imágenes Analizadas ({{ resultado.total_images }})</h3>
+                    
+                    <div class="image-grid">
+                        {% for img_result in resultado.all_results %}
+                        <div class="image-grid-item">
+                            <img src="/static/uploads/{{ img_result.filename }}" alt="Imagen {{ loop.index }}">
+                            <div class="image-label">
+                                {{ img_result.class }}<br>
+                                {{ img_result.probability|round(1) }}%
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    feather.replace();
+
+    const fileInput = document.getElementById('fileInput');
+    const fileName = document.getElementById('fileName');
+    const fileCount = document.getElementById('fileCount');
+    const maxFiles = 10;
+
+    fileInput.addEventListener('change', function(e) {
+        const files = e.target.files;
+        
+        if (files.length > maxFiles) {
+            alert(`Máximo ${maxFiles} archivos permitidos`);
+            fileInput.value = '';
+            return;
+        }
+        
+        if (files.length > 0) {
+            fileName.textContent = `${files.length} archivo(s) seleccionado(s)`;
+            fileCount.textContent = `${files.length} archivos`;
+            fileCount.style.display = 'inline-block';
+            
+            let names = Array.from(files).map(f => f.name).join(', ');
+            if (names.length > 100) names = names.substring(0, 100) + '...';
+            fileName.title = names;
+        } else {
+            fileName.textContent = 'Sin archivos seleccionados';
+            fileCount.style.display = 'none';
+        }
+    });
+
+    const dropZone = document.getElementById('dropZone');
+
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.style.background = '#e3f2fd';
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.style.background = '';
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.style.background = '';
+        
+        const files = e.dataTransfer.files;
+        
+        if (files.length > maxFiles) {
+            alert(`Máximo ${maxFiles} archivos permitidos`);
+            return;
+        }
+        
+        fileInput.files = files;
+        fileInput.dispatchEvent(new Event('change'));
+    });
+
+    document.getElementById('uploadForm').addEventListener('submit', function() {
+        document.getElementById('loading').style.display = 'block';
+    });
+</script>
+
+<script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+
+{% endblock %}
